@@ -1,0 +1,18 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{% static 'css/materialize.min.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="container">
+  {% block before_body %}{% endblock %}
+  {% block body %}{% endblock %}
+  {% block after_body %}{% endblock %}
+  <script src="{% static 'js/materialize.min.js' %}"></script>
+  <script src="{% static 'js/jquery-3.4.1.min.js' %}"></script>
+</body>
+</html>
