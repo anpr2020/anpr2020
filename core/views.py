@@ -97,7 +97,7 @@ def recognition(request):
             fname = os.path.join(settings.BASE_DIR, 'media', 'frames', filename)
             if os.path.isfile(fname):
                 img_path, text = get_text_from_frame(fname)
-                if len(text) > 5:
+                if len(text) > 8:
                     text = ''.join(e for e in text.strip() if e.isalnum())
                     if text in dict_count:
                         dict_count[text] += 1
