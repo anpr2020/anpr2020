@@ -1,6 +1,7 @@
 from django.shortcuts import render
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
 
 #project imports start
 import cv2
@@ -22,6 +23,7 @@ def home(request):
 def select_video(request):
     return render(request, 'selectVideo.html')
 
+@csrf_exempt
 def recognition(request):
     if request.method == 'POST' and request.FILES:
 
@@ -36,7 +38,7 @@ def recognition(request):
         file = request.FILES.get('video_file')
         fname = file.temporary_file_path()
 
-        pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"
+        pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
         def preprocess_frame(frame):
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -173,11 +175,10 @@ def recognition(request):
         result = None
         max_count = 0
         re_card = r"^[a-zA-Z][a-zA-Z]\d\d[a-zA-Z][a-zA-Z]\d\d\d\d$"
-        for res in dict_count:
-            if not result:
-                result = res
-            if re.match(re_card, res) and dict_count[res] > max_count:
-                max_count = dict_count[res]
-                result = res
-        return render(request, 'recognition.html', {'data': data, 'result': result})
+        for k, v in dict_count.items():
+            if v > max_count:
+                result, max_count = k, v
+        if result[2] in ['o', 'O']:
+            result = result[:2] + '0' + result[3:]
+        return JsonResponse({'data': data, 'result': result})
     raise Http404
