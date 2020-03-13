@@ -1,5 +1,5 @@
 import React from "react";
-
+import { Redirect } from "react-router-dom";
 import {
   Box,
   Button,
@@ -8,64 +8,62 @@ import {
   Typography,
   FormControl,
   Input,
-  CircularProgress
+  CircularProgress,
 } from "@material-ui/core";
 
-import SrcCard from "../components/srcCard";
-import DataTable from "../components/dataTable";
+import SrcCard from "../components/SrcCard";
+import DataTable from "../components/DataTable";
 
-export default class Home extends React.Component {
+export default class Upload extends React.Component {
   constructor(props) {
     super(props);
 
     this.state = {
       formState: "INPUT",
-      formResult: {
-        data: [],
-        result: ""
-      },
+      formResult: null,
       fileObject: null,
-      src: null
+      src: null,
     };
   }
 
-  handleSubmit = async event => {
+  getTaskId = async (formData) => {
+    return await (
+      await fetch(window.djangoUrls.Process, {
+        method: "POST",
+        body: formData,
+      })
+    ).json();
+  };
+
+  handleSubmit = (event) => {
     event.preventDefault();
     const { fileObject } = this.state;
 
     if (!fileObject) return alert("Please choose a file to upload");
 
     this.setState({
-      formState: "SUBMIT"
+      formState: "SUBMIT",
     });
 
     const formData = new FormData();
 
     formData.append("video_file", fileObject);
 
-    const response = await (
-      await fetch(window.djangoUrls.Process, {
-        method: "POST",
-        body: formData
-      })
-    ).json();
-
-    console.log(response);
-
-    this.setState({
-      formState: "RESULT",
-      formResult: response
+    this.getTaskId(formData).then((response) => {
+      this.setState({
+        formState: "RESULT",
+        formResult: response,
+      });
     });
   };
 
-  handleChange = event => {
+  handleChange = (event) => {
     const fileObject = event.target.files[0] || null;
-    if (this.state.fileObject !== fileObject) {
+    this.state.fileObject !== fileObject &&
       this.setState({
         fileObject: fileObject,
-        src: this.getBlobUrl(fileObject)
+        src: this.getBlobUrl(fileObject),
       });
-    }
   };
 
   getBlobUrl(fileObject) {
@@ -104,18 +102,9 @@ export default class Home extends React.Component {
           <CircularProgress />
         </React.Fragment>
       );
-    } else {
+    } else if (formState === "RESULT" && formResult) {
       cardContent = (
-        <React.Fragment>
-          <DataTable data={formResult.data} />
-          <Box m={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="h2">{formResult.result}</Typography>
-              </CardContent>
-            </Card>
-          </Box>
-        </React.Fragment>
+        <Redirect to={window.urls.Progress.toUrl({ id: formResult.task_id })} />
       );
     }
 
