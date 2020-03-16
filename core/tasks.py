@@ -1,16 +1,16 @@
 from celery.decorators import task
 
 from django.conf import settings
-from django.core.files.storage import default_storage
 
 #project imports start
 import os
 import re
 import sys
 import cv2
-import time
-import imutils
 import shutil
+import random
+import base64
+import imutils
 import numpy as np
 import pandas as pd
 import pytesseract
@@ -21,13 +21,6 @@ from imutils.object_detection import non_max_suppression
 @task(bind=True)
 def recognize(self, video_path):
 
-    video_path = os.path.join(settings.MEDIA_ROOT, video_path)
-
-    def ss(state, meta):
-        self.update_state(state, meta)
-
-    ss(state='START')
-
     t_loc, t_locs = None, [
         os.path.join('C:' + os.path.sep, 'Program Files', 'Tesseract-OCR', 'tesseract.exe'),
         os.path.join('C:' + os.path.sep, 'Program Files (x86)', 'Tesseract-OCR', 'tesseract.exe')
@@ -37,13 +30,13 @@ def recognize(self, video_path):
             t_loc = loc
 
     if not t_loc:
-        return ss(state='ERROR', meta={'message': 'Tesseract location error'})
+        return self.update_state(state='FAILURE', meta={'message': 'Tesseract location error'})
 
     pytesseract.pytesseract.tesseract_cmd = t_loc
 
-    video_file = default_storage.open(video_path)
+    self.update_state(state='RUNNING')
 
-    video_cap = cv2.VideoCapture(video_file)
+    video_cap = cv2.VideoCapture(video_path)
     success, frame = video_cap.read()
 
     def get_text_from_frame(frame):
@@ -67,19 +60,30 @@ def recognize(self, video_path):
         else:
             return (h, w)
 
-
     total = count = 0
+    info_data = {
+        'frame': [],
+        'canny': [],
+        'contour': [],
+        'plate': [],
+        'text': [],
+    }
+
+    def info_append(k, v, type=1):
+        if type == 1:
+            v = 'data:image/jpeg;base64,' + base64.b64encode(cv2.imencode('.jpg', v)[1]).decode("utf-8")
+        info_data[k].append(v)
 
     while success:
         total += 1
+        info_append('frame', frame)
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         canny_output = cv2.Canny(gray, 170, 200)
+        info_append('canny', canny_output)
 
         contours, hierarchy = cv2.findContours(
             canny_output, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-        # cv2.imshow('Canny Edges', canny_output)
-        # cv2.waitKey(2)
         contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
         plate_match = False
@@ -103,23 +107,27 @@ def recognize(self, video_path):
                         frame, [box, contour, approx], 2, (0, 0, 255), 5)
                     x, y, w, h = cv2.boundingRect(approx)
                     plate_frame = frame[y:y+h,x:x+w]
-                    cv2.putText(frame, get_text_from_frame(plate_frame), (x, y),
+                    rec_text = get_text_from_frame(plate_frame)
+                    cv2.putText(frame, rec_text, (x, y),
                                 cv2.FONT_HERSHEY_SIMPLEX , 1.5, (0, 255, 0), 2, cv2.LINE_AA)
+                    info_append('text', rec_text, 0)
                     break
 
         if plate_match:
             count += 1
-        # drawing = np.zeros(
-        #     (canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
 
-        # for i in range(len(contours)):
-        #     color = (0, 255, 0)
-           # cv2.drawContours(drawing, contours, i, color)
-        # cv2.drawContours(canny_output, [plate], -1, (0,255,0), 3)
+        drawing = np.zeros(
+            (canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
 
-        cv2.imshow('Contours', frame)
-        cv2.waitKey(2)
+        for contour in contours:
+            color = [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
+            cv2.drawContours(drawing, contour, -1, color)
+
+        info_append('contour', drawing)
+        info_append('plate', frame)
+
+        self.update_state(state="RUNNING", meta=info_data)
 
         success, frame = video_cap.read()
 
-    ss("END")
+    video_cap.release()
