@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.http import Http404, JsonResponse
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import never_cache
 from django.core.files.storage import default_storage
 
 #project imports start
@@ -23,13 +24,16 @@ from .tasks import recognize
 #project import end
 
 @csrf_exempt
+@never_cache
 def progress(request):
     if request.method == 'POST':
         jobj = json.loads(request.body.decode('utf-8'))
         task_id = jobj.get('task_id')
         t = AsyncResult(task_id)
-        print(t.state, t.info)
-        return JsonResponse({'state': t.state, 'info': t.info})
+        state, info = t.state, t.info
+        if issubclass(type(t.info), Exception):
+            info = str(t.info)
+        return JsonResponse({'state': state, 'info': info})
     return Http404
 
 @csrf_exempt
@@ -42,8 +46,9 @@ def recognition(request):
                 raise Exception
 
             file_name = default_storage.save(video_file.name, video_file)
-            
-            t_id = recognize.delay(file_name).task_id
+            video_path = os.path.join(settings.MEDIA_ROOT, file_name)
+
+            t_id = recognize.delay(video_path).task_id
             return JsonResponse({'task_id': t_id})
     except:
         raise Http404
