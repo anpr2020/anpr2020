@@ -4,7 +4,8 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
+	CardContent,
+	Container,
   Typography,
   FormControl,
   Input,
@@ -12,7 +13,6 @@ import {
 } from "@material-ui/core";
 
 import SrcCard from "../components/SrcCard";
-import DataTable from "../components/DataTable";
 
 export default class Upload extends React.Component {
   constructor(props) {
@@ -109,14 +109,14 @@ export default class Upload extends React.Component {
     }
 
     return (
-      <React.Fragment>
+      <Container maxWidth="xl">
         <Box m={3} textAlign="center">
           <Card>
             <CardContent>{cardContent}</CardContent>
           </Card>
         </Box>
         <SrcCard src={this.state.src} />
-      </React.Fragment>
+      </Container>
     );
   }
 }
