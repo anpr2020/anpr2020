@@ -1,40 +1,211 @@
 import React from "react";
 
-export default class Progress extends React.Component {
+import {
+  Container,
+  Box,
+  Grid,
+  Paper,
+  Typography,
+  CircularProgress,
+} from "@material-ui/core";
+import { withStyles } from "@material-ui/core/styles";
+
+const styles = (theme) => ({
+  canvasStyles: {
+    width: "100%",
+    height: "100%",
+  },
+});
+
+class Progress extends React.Component {
   constructor(props) {
-		super(props);
+    super(props);
+    this.frameCanvas = React.createRef();
+    this.cannyCanvas = React.createRef();
+    this.countourCanvas = React.createRef();
+    this.outputCanvas = React.createRef();
+    this.progressIndex = 0;
     this.state = {
       progressState: null,
       progressInfo: null,
     };
   }
 
-  getTaskInfo = async (data) => {
-    return await (
+  getTaskInfo = async (data) =>
+    await (
       await fetch(window.djangoUrls.Progress, {
-				method: "POST",
+        method: "POST",
         body: JSON.stringify(data),
       })
     ).json();
+
+  setImage = (elRef, imageData) => {
+		elRef.current.src = imageData;
   };
 
-	componentDidMount(){
-		const { progressState } = this.state;
-		const {id} = this.props.match.params;
-		
-		const liveUpdates = () => {
-			this.getTaskInfo({'task_id': id}).then(res => {
-				console.log(res.json());
-				setTimeout(liveUpdates(), 1000);
-			})
-		};
+  doUpdate = () => {
+    const { progressState, progressInfo } = this.state;
+    if (["PENDING", "RUNNING", "END"].includes(progressState) && progressInfo) {
+      while (progressInfo.hasOwnProperty("frame") && this.progressIndex < progressInfo.frame.length) {
+        this.setImage(
+          this.frameCanvas,
+          progressInfo.frame[this.progressIndex]
+        );
 
-		liveUpdates();
-	}
+        if (progressInfo.hasOwnProperty("canny")) {
+          this.setImage(
+            this.cannyCanvas,
+            progressInfo.canny[this.progressIndex]
+          );
+        }
+        if (progressInfo.hasOwnProperty("contour")) {
+          this.setImage(
+            this.countourCanvas,
+            progressInfo.contour[this.progressIndex]
+          );
+        }
+        if (progressInfo.hasOwnProperty("plate")) {
+          this.setImage(
+            this.outputCanvas,
+            progressInfo.plate[this.progressIndex]
+          );
+        }
+        this.progressIndex++;
+      }
+    }
+  };
+
+  componentDidMount() {
+    const { id } = this.props.match.params;
+
+    if (id) {
+      const liveUpdates = () => {
+        this.getTaskInfo({ task_id: id })
+          .then((res) => {
+            this.setState({
+              progressState: res.state,
+              progressInfo: res.info,
+            });
+            this.doUpdate();
+            if (["PENDING", "START", "RUNNING"].includes(res.state)) {
+              liveUpdates();
+            }
+          })
+          .catch((err) => {
+            this.setState({
+              progressState: "FAILURE",
+              progressInfo: err.toString(),
+            });
+            alert("ERROR : " + err);
+          });
+      };
+
+      liveUpdates();
+    }
+  }
 
   render() {
-    return (
-			<div></div>
-		);
+    const { progressState, progressInfo } = this.state;
+    const { match, classes } = this.props;
+    const { id } = match.params;
+
+    let renderElement = () => {
+      if ([null, "PENDING"].includes(progressState)) {
+        return (
+          <Box textAlign="center">
+            <Typography component="h4">Processing Video</Typography>
+            <CircularProgress />
+          </Box>
+        );
+      } else if (["RUNNING", "SUCCESS"].includes(progressState)) {
+        return (
+          <Container maxWidth="xl">
+            <Grid container spacing={1}>
+							<Grid item xs={12}>
+								<Typography variant="h2" align="center">
+									{progressState}
+								</Typography>
+							</Grid>
+              <Grid item xs={12} sm={6}>
+                <Box component={Paper}>
+                  <Typography variant="subtitle2" align="center">
+                    Frame Output
+                  </Typography>
+                  <img
+										alt=""
+                    key={0}
+                    ref={this.frameCanvas}
+                    className={classes.canvasStyles}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Box component={Paper}>
+                  <Typography variant="subtitle2" align="center">
+                    Canny Output
+                  </Typography>
+                  <img
+										alt=""
+                    key={1}
+                    ref={this.cannyCanvas}
+                    className={classes.canvasStyles}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Box component={Paper}>
+                  <Typography variant="subtitle2" align="center">
+                    Contour Output
+                  </Typography>
+                  <img
+										alt=""
+                    key={2}
+                    ref={this.countourCanvas}
+                    className={classes.canvasStyles}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Box component={Paper}>
+                  <Typography variant="subtitle2" align="center">
+                    Recognition Output
+                  </Typography>
+                  <img
+										alt=""
+                    key={3}
+                    ref={this.outputCanvas}
+                    className={classes.canvasStyles}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12}>
+                <Box component={Paper}>
+                  <Typography variant="subtitle2" align="center">
+                    Text Output
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Container>
+        );
+      } else if (!id) {
+        return <h1 className="text-center">No ID</h1>;
+      } else {
+        return (
+          <div>
+            <Typography variant="h2" align="center">
+              STATE : {progressState}
+            </Typography>
+            <Typography variant="h2" align="center">
+              INFO : {progressInfo}
+            </Typography>
+          </div>
+        );
+      }
+    };
+
+    return renderElement();
   }
 }
+
+export default withStyles(styles)(Progress);
