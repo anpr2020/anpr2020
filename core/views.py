@@ -51,7 +51,8 @@ def recognition(request):
             t_id = recognize.delay(video_path).task_id
             return JsonResponse({'task_id': t_id})
     except:
-        raise Http404
+        pass
+    raise Http404
 
 # @csrf_exempt
 # def recognition(request):

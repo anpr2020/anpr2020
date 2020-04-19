@@ -42,7 +42,7 @@ def recognize(self, video_path):
     def get_text_from_frame(frame):
         include = [char for char in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890']
         text = pytesseract.image_to_string(frame, lang='eng')
-        return ''.join([char for char in text if (char.isupper() or char.isdigit()) and char.upper() in include]) or ''
+        return ''.join([char for char in text if (char.isupper() or char.isdigit()) and char.upper() in include])
 
     def helper_boxwh(box):
         x1 = box[0][0]
@@ -102,16 +102,19 @@ def recognize(self, video_path):
                 ratio = box_w / box_h
 
                 if accepted_ratio - error < ratio and ratio < accepted_ratio + error:
-                    plate_match = True
                     cv2.drawContours(
                         frame, [box, contour, approx], 2, (0, 0, 255), 5)
                     x, y, w, h = cv2.boundingRect(approx)
                     plate_frame = frame[y:y+h,x:x+w]
                     rec_text = get_text_from_frame(plate_frame)
+
+                    if not rec_text:
+                        continue
+
+                    plate_match = True
                     cv2.putText(frame, rec_text, (x, y),
                                 cv2.FONT_HERSHEY_SIMPLEX , 1.5, (0, 255, 0), 2, cv2.LINE_AA)
                     info_append('text', rec_text, 0)
-                    break
 
         if plate_match:
             count += 1

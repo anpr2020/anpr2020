@@ -88,7 +88,7 @@ class Progress extends React.Component {
             });
             this.doUpdate();
             if (["PENDING", "START", "RUNNING"].includes(res.state)) {
-              liveUpdates();
+              setTimeout(liveUpdates(), 2000);
             }
           })
           .catch((err) => {
