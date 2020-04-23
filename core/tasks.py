@@ -134,3 +134,5 @@ def recognize(self, video_path):
         success, frame = video_cap.read()
 
     video_cap.release()
+
+    return info_data
