@@ -40,17 +40,17 @@ class Progress extends React.Component {
     ).json();
 
   setImage = (elRef, imageData) => {
-		elRef.current.src = imageData;
+    elRef.current.src = imageData;
   };
 
   doUpdate = () => {
     const { progressState, progressInfo } = this.state;
-    if (["PENDING", "RUNNING", "END"].includes(progressState) && progressInfo) {
-      while (progressInfo.hasOwnProperty("frame") && this.progressIndex < progressInfo.frame.length) {
-        this.setImage(
-          this.frameCanvas,
-          progressInfo.frame[this.progressIndex]
-        );
+    if (["PENDING", "RUNNING"].includes(progressState) && progressInfo) {
+      while (
+        progressInfo.hasOwnProperty("frame") &&
+        this.progressIndex < progressInfo.frame.length
+      ) {
+        this.setImage(this.frameCanvas, progressInfo.frame[this.progressIndex]);
 
         if (progressInfo.hasOwnProperty("canny")) {
           this.setImage(
@@ -121,57 +121,57 @@ class Progress extends React.Component {
         return (
           <Container maxWidth="xl">
             <Grid container spacing={1}>
-							<Grid item xs={12}>
-								<Typography variant="h2" align="center">
-									{progressState}
-								</Typography>
-							</Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
+                <Typography variant="h2" align="center">
+                  {progressState}
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
                 <Box component={Paper}>
                   <Typography variant="subtitle2" align="center">
                     Frame Output
                   </Typography>
                   <img
-										alt=""
+                    alt=""
                     key={0}
                     ref={this.frameCanvas}
                     className={classes.canvasStyles}
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <Box component={Paper}>
                   <Typography variant="subtitle2" align="center">
                     Canny Output
                   </Typography>
                   <img
-										alt=""
+                    alt=""
                     key={1}
                     ref={this.cannyCanvas}
                     className={classes.canvasStyles}
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <Box component={Paper}>
                   <Typography variant="subtitle2" align="center">
                     Contour Output
                   </Typography>
                   <img
-										alt=""
+                    alt=""
                     key={2}
                     ref={this.countourCanvas}
                     className={classes.canvasStyles}
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <Box component={Paper}>
                   <Typography variant="subtitle2" align="center">
                     Recognition Output
                   </Typography>
                   <img
-										alt=""
+                    alt=""
                     key={3}
                     ref={this.outputCanvas}
                     className={classes.canvasStyles}
@@ -183,6 +183,7 @@ class Progress extends React.Component {
                   <Typography variant="subtitle2" align="center">
                     Text Output
                   </Typography>
+                  
                 </Box>
               </Grid>
             </Grid>

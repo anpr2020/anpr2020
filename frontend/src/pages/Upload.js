@@ -4,8 +4,8 @@ import {
   Box,
   Button,
   Card,
-	CardContent,
-	Container,
+  CardContent,
+  Container,
   Typography,
   FormControl,
   Input,
@@ -26,14 +26,13 @@ export default class Upload extends React.Component {
     };
   }
 
-  getTaskId = async (formData) => {
-    return await (
+  getTaskId = async (formData) =>
+    await (
       await fetch(window.djangoUrls.Process, {
         method: "POST",
         body: formData,
       })
     ).json();
-  };
 
   handleSubmit = (event) => {
     event.preventDefault();
