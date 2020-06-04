@@ -8,7 +8,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
 } from "@material-ui/core";
 
 export default function DataTable({ data }) {
@@ -23,10 +23,10 @@ export default function DataTable({ data }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.map((row, i) => (
+            {Object.entries(data).map((rows, i) => (
               <TableRow key={i}>
-                <TableCell scope="row">{row[0]}</TableCell>
-                <TableCell>{row[1]}</TableCell>
+                <TableCell>{rows[0]}</TableCell>
+                <TableCell>{rows[1].join(", ")}</TableCell>
               </TableRow>
             ))}
           </TableBody>

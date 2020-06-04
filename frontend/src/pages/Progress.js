@@ -9,6 +9,7 @@ import {
   CircularProgress,
 } from "@material-ui/core";
 import { withStyles } from "@material-ui/core/styles";
+import DataTable from "../components/DataTable";
 
 const styles = (theme) => ({
   canvasStyles: {
@@ -28,6 +29,7 @@ class Progress extends React.Component {
     this.state = {
       progressState: null,
       progressInfo: null,
+      progressTable: {},
     };
   }
 
@@ -76,15 +78,22 @@ class Progress extends React.Component {
   };
 
   componentDidMount() {
-    const { id } = this.props.match.params;
+		const { id } = this.props.match.params;
 
     if (id) {
+			const dataTable = {};
       const liveUpdates = () => {
         this.getTaskInfo({ task_id: id })
           .then((res) => {
+            if (res.info && res.info.hasOwnProperty("plate")) {
+              res.info.plate.map((p, i) => {
+								dataTable[i] = res.info.text[i]
+              });
+						}
             this.setState({
               progressState: res.state,
               progressInfo: res.info,
+              progressTable: {...this.state.progressTable, ...dataTable},
             });
             this.doUpdate();
             if (["PENDING", "START", "RUNNING"].includes(res.state)) {
@@ -105,7 +114,7 @@ class Progress extends React.Component {
   }
 
   render() {
-    const { progressState, progressInfo } = this.state;
+    const { progressState, progressInfo, progressTable } = this.state;
     const { match, classes } = this.props;
     const { id } = match.params;
 
@@ -126,7 +135,7 @@ class Progress extends React.Component {
                   {progressState}
                 </Typography>
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={6}>
                 <Box component={Paper}>
                   <Typography variant="subtitle2" align="center">
                     Frame Output
@@ -139,7 +148,7 @@ class Progress extends React.Component {
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={6}>
                 <Box component={Paper}>
                   <Typography variant="subtitle2" align="center">
                     Canny Output
@@ -152,7 +161,7 @@ class Progress extends React.Component {
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={6}>
                 <Box component={Paper}>
                   <Typography variant="subtitle2" align="center">
                     Contour Output
@@ -165,7 +174,7 @@ class Progress extends React.Component {
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={6}>
                 <Box component={Paper}>
                   <Typography variant="subtitle2" align="center">
                     Recognition Output
@@ -183,7 +192,7 @@ class Progress extends React.Component {
                   <Typography variant="subtitle2" align="center">
                     Text Output
                   </Typography>
-                  
+                  <DataTable data={progressTable} key={0}/>
                 </Box>
               </Grid>
             </Grid>
