@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'corsheaders',
     'core',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -71,7 +72,16 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'recognition.wsgi.application'
+# WSGI_APPLICATION = 'recognition.wsgi.application'
+ASGI_APPLICATION = "recognition.routing.application"
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
 
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:3000",
