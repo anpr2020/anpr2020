@@ -10,6 +10,9 @@ Automatic Number Plate Recognition with Live Updates of process using
  
  
  ## Before running the project
+ - Install Redis Server
+     - For Ubunutu https://www.digitalocean.com/community/tutorials/how-to-install-and-secure-redis-on-ubuntu-18-04
+     - For windows download from https://github.com/microsoftarchive/redis/releases/download/win-3.2.100/Redis-x64-3.2.100.msi
  - Install Node modules
      - `cd frontend`
      - `npm install`
