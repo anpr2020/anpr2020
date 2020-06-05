@@ -24,5 +24,5 @@ Automatic Number Plate Recognition with Live Updates of process using
  - `python manage.py runserver`
  - `celery -A recognition worker -l DEBUG -P gevent`
  - `celery -A recognition beat -l DEBUG --scheduler django_celery_beat.schedulers:DatabaseScheduler`
- - `flower -A recognition -l debug --basic_auth=admin:Yashas123$ --address=127.0.0.1 --port=5555` (Optional)
+ - `flower -A recognition -l debug --basic_auth=admin:xxxx --address=127.0.0.1 --port=5555` (Optional)
  - `cd frontend && npm run start`
