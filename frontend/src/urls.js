@@ -1,7 +1,7 @@
 import Location from "react-app-location";
 import * as Yup from "yup";
 
-const djangoServerUrl = "http://127.0.0.1:8000/";
+const djangoServerUrl = "http://127.0.0.1:8000/", djangoWSUrl = "ws://127.0.0.1:8000/ws/";
 
 const urls = {
   Upload: ["/upload"],
@@ -13,11 +13,10 @@ const urls = {
 };
 
 const djangoUrls = {
-  Process: "process/",
-  Progress: "progress/",
+  Process: djangoServerUrl + "process/",
+  Progress: djangoWSUrl + "progress/",
 };
 
-for (let url in djangoUrls) djangoUrls[url] = djangoServerUrl + djangoUrls[url];
 for (let url in urls) urls[url] = new Location(...urls[url]);
 
 window.djangoUrls = djangoUrls;

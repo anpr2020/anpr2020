@@ -48,12 +48,19 @@ export default class Upload extends React.Component {
 
     formData.append("video_file", fileObject);
 
-    this.getTaskId(formData).then((response) => {
-      this.setState({
-        formState: "RESULT",
-        formResult: response,
+    this.getTaskId(formData)
+      .then((response) => {
+        this.setState({
+          formState: "RESULT",
+          formResult: response,
+        });
+      })
+      .catch((err) => {
+        this.setState({
+          formState: "INPUT",
+          formResult: null,
+        });
       });
-    });
   };
 
   handleChange = (event) => {

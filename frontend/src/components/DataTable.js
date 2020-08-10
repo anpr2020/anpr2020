@@ -9,6 +9,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Typography,
 } from "@material-ui/core";
 
 export default function DataTable({ data }) {
@@ -23,12 +24,20 @@ export default function DataTable({ data }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {Object.entries(data).map((rows, i) => (
-              <TableRow key={i}>
-                <TableCell>{rows[0]}</TableCell>
-                <TableCell>{rows[1].join(", ")}</TableCell>
+            {Object.entries(data).length ? (
+              Object.entries(data).map((rows, i) => (
+                <TableRow key={i}>
+                  <TableCell>{rows[0]}</TableCell>
+                  <TableCell>{rows[1].join(", ")}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={2}>
+                  <Typography variant="subtitle1" align="center">No data</Typography>
+                </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </TableContainer>
