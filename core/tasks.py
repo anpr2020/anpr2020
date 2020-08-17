@@ -16,16 +16,25 @@ from django.core.files.storage import default_storage
 
 INP_REGEX = r'^[A-Z]{2}\s*[0-9]{1,2}\s*[A-Z]{1,2}\s*[0-9]{1,4}$'
 
-def get_result_plates(all_texts):
-    found_plates = []
-    all_plates = []
-    grouped_plates = []
-    #Merge inner lists
-    for texts in all_texts:
-        for text in texts:
-            all_plates.append(text)
+def filter_pnames(texts):
+    new_texts = []
+    texts = list(dict.fromkeys([(''.join(t.split())).upper() for t in texts]))
+    len_texts = len(texts)
+    for i in range(len_texts):
+        f = False
+        for j in range(len_texts):
+            if i!=j:
+                r = Levenshtein.ratio(texts[i], texts[j])
+                if r > 0.8:
+                    f = True
 
-    #Group Plates
+        if not f:
+            new_texts.append(texts[i])
+
+    return new_texts
+
+def get_grouped_plates(all_plates):
+    grouped_plates = []
     len_plates = len(all_plates)
     for i in range(len_plates):
         group_plates = {}
@@ -36,111 +45,106 @@ def get_result_plates(all_texts):
                 r = Levenshtein.ratio(plate, plate2)
                 if plate in group_plates:
                     group_plates[plate] += 1
-                elif r > 0.85:
+                elif r > 0.8:
                     group_plates[plate2] = 1
 
         grouped_plates.append(group_plates)
 
+    return grouped_plates
 
+def process_grouped_plates(grouped_plates):
+    found_plates = {}
     for group_plates in grouped_plates:
+
         if not group_plates:
             continue
-        max_found_plate, max_count = list(group_plates.items())[0]
-        for pk, pv in group_plates.items():
+
+        group_items = group_plates.items()
+        max_found_plate, max_count = list(group_items)[0]
+        for pk, pv in group_items:
             if pv > max_count:
                 max_found_plate, max_count = pk, pv
 
-        if max_found_plate not in found_plates:
-            found_plates.append(max_found_plate)
+        if max_found_plate not in found_plates.keys():
+            found_plates.update({max_found_plate: max_count})
 
     return found_plates
 
-def remove_duplicates(texts):
-    nd_texts = []
-    for t in texts:
-        t = t.upper()
-        if t not in nd_texts:
-            nd_texts.append(t)
-    return nd_texts
+def final_process(found_plates):
 
-def filter_pnames(texts):
-    new_texts = []
-    texts = remove_duplicates([''.join(t.split()) for t in texts])
-    len_texts = len(texts)
-    for i in range(len_texts):
-        f = False
-        for j in range(len_texts):
-            if i!=j:
-                r = Levenshtein.ratio(texts[i], texts[j])
-                if r > 0.75:
-                    f = True
+    if len(found_plates) <= 1:
+        return list(found_plates.keys())
 
-        if not f:
-            new_texts.append(texts[i])
+    final_plates = []
+    similar_found = True
+    while similar_found and found_plates:
+        flag = False
+        max_plate = max(found_plates, key=found_plates.get)
+        for plate, plate_count in list(found_plates.items()):
+            r = Levenshtein.ratio(max_plate, plate)
+            if 0.8 < r < 1:
+                found_plates.pop(plate)
+                flag |= True
 
-    return new_texts
+        found_plates.pop(max_plate)
+        final_plates.append(max_plate)
 
-def helper_boxwh(box):
-    x1 = box[0][0]
-    y1 = box[0][1]
-    x2 = box[1][0]
-    y2 = box[1][1]
-    x3 = box[2][0]
-    y3 = box[2][1]
+        similar_found = flag
 
-    w = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    h = np.sqrt((x3 - x2) ** 2 + (y3 - y2) ** 2)
+    return final_plates
 
-    if np.abs(y2 - y1) < np.abs(y3 - y2):
-        return (w, h)
-    else:
-        return (h, w)
+def get_result_plates(all_texts):
+    all_plates = []
+    #Merge inner lists
+    for texts in all_texts:
+        for text in texts:
+            all_plates.append(text)
+
+    grouped_plates = get_grouped_plates(all_plates)
+
+    found_plates = process_grouped_plates(grouped_plates)
+
+    return final_process(found_plates)
 
 def get_text_from_frame(frame):
     include = [char for char in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890']
-    text = pytesseract.image_to_string(frame, lang='eng')
+    text = pytesseract.image_to_string(frame, lang='eng', config='--psm 11')
     return ''.join([char for char in text if (char.isupper() or char.isdigit()) and char.upper() in include]).strip()
 
 def frame_process(success, frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bilateralFilter(gray, 13, 15, 15)
     canny_output = cv2.Canny(gray, 170, 200)
 
     contours, hierarchy = cv2.findContours(
-        canny_output, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        canny_output, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:30]
 
     plate_match, rec_texts = False, []
     for contour in contours:
         approx = cv2.approxPolyDP(
-            contour, cv2.arcLength(contour, True) * 0.05, True)
+            contour, cv2.arcLength(contour, True) * 0.018, True)
 
         if len(approx) >= 4 and np.abs(cv2.contourArea(contour)) > 1000:
             rect = cv2.minAreaRect(contour)
             box = np.int0(cv2.boxPoints(rect))
-            (box_w, box_h) = helper_boxwh(box)
+            x, y, w, h = cv2.boundingRect(approx)
+            plate_frame = frame[y:y+h,x:x+w]
+            plate_frame = cv2.cvtColor(plate_frame, cv2.COLOR_BGR2GRAY)
+            plate_frame = cv2.threshold(plate_frame, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
+            kernel = np.ones((1,1), np.uint8)
+            plate_frame = cv2.dilate(plate_frame, kernel, iterations = 3)
+            rec_text = get_text_from_frame(plate_frame.copy())
+            if not re.match(INP_REGEX, rec_text):
+                continue
+            rec_texts.append(rec_text)
+            plate_match = True
 
-            #https://orbiz.in/number-plate-rules-in-india/
-            accepted_ratios = [1.7, 2, 4.16]
-            error = 0.82
-
-            ratio = box_w / box_h
-
-            for accepted_ratio in accepted_ratios:
-                if accepted_ratio - error < ratio and ratio < accepted_ratio + error:
-                    plate_match = True
-                    x, y, w, h = cv2.boundingRect(approx)
-                    plate_frame = frame[y:y+h,x:x+w]
-                    rec_text = get_text_from_frame(plate_frame.copy())
-
-                    if not re.match(INP_REGEX, rec_text):
-                        continue
-                    rec_texts.append(rec_text)
-
-                    cv2.drawContours(
-                        frame, [box, contour, approx], 2, (0, 0, 255), 5)
-                    cv2.putText(frame, rec_text, (x, y),
-                                cv2.FONT_HERSHEY_SIMPLEX , 1.5, (0, 255, 0), 2, cv2.LINE_AA)
+            cv2.drawContours(
+                frame, [box, contour, approx], 2, (0, 0, 255), 5)
+            cv2.putText(frame, rec_text, (x, y),
+                        cv2.FONT_HERSHEY_SIMPLEX , 1.5, (0, 255, 0), 2, cv2.LINE_AA)
 
     drawing = np.zeros(
         (canny_output.shape[0], canny_output.shape[1], 3), dtype=np.uint8)
