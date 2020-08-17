@@ -111,6 +111,13 @@ def get_text_from_frame(frame):
     text = pytesseract.image_to_string(frame, lang='eng', config='--psm 11')
     return ''.join([char for char in text if (char.isupper() or char.isdigit()) and char.upper() in include]).strip()
 
+def correct_angle(image, angle):
+   (h, w) = image.shape[:2]
+   center = (w / 2, h / 2)
+   M = cv2.getRotationMatrix2D(center, angle, 1.0)
+   rotated_image = cv2.warpAffine(image, M, (w,h))
+   return rotated_image
+
 def frame_process(success, frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.bilateralFilter(gray, 13, 15, 15)
@@ -131,6 +138,7 @@ def frame_process(success, frame):
             box = np.int0(cv2.boxPoints(rect))
             x, y, w, h = cv2.boundingRect(approx)
             plate_frame = frame[y:y+h,x:x+w]
+            plate_frame = correct_angle(plate_frame, rect[2])
             plate_frame = cv2.cvtColor(plate_frame, cv2.COLOR_BGR2GRAY)
             plate_frame = cv2.threshold(plate_frame, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
             kernel = np.ones((1,1), np.uint8)
